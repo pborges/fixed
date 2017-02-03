@@ -1,4 +1,4 @@
-#Fixed Width marshaler
+#Fixed width marshal/unmarshal 
 ##not production ready
 
 - [x] string
