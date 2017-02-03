@@ -54,7 +54,7 @@ func Marshal(in interface{}) (res []byte, err error) {
 			} else {
 				switch v.Field(i).Kind() {
 				case reflect.Int, reflect.Int32, reflect.Int64:
-					var pad = "0"
+					var pad = defaultPadInt
 					if p, ok := tags[tagPad]; ok {
 						pad = p
 					}
@@ -79,7 +79,7 @@ func Marshal(in interface{}) (res []byte, err error) {
 						return
 					}
 				case reflect.String:
-					var pad = " "
+					var pad = defaultPadString
 					if p, ok := tags[tagPad]; ok {
 						pad = p
 					}
@@ -128,17 +128,4 @@ func Marshal(in interface{}) (res []byte, err error) {
 	}
 	res = buf.Bytes()
 	return
-}
-
-func rightPad2Len(s string, padStr string, overallLen int) string {
-	var padCountInt int
-	padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
-	var retStr = s + strings.Repeat(padStr, padCountInt)
-	return retStr[:overallLen]
-}
-func leftPad2Len(s string, padStr string, overallLen int) string {
-	var padCountInt int
-	padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
-	var retStr = strings.Repeat(padStr, padCountInt) + s
-	return retStr[(len(retStr) - overallLen):]
 }

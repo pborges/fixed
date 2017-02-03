@@ -56,7 +56,7 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 			} else {
 				switch v.Field(i).Kind() {
 				case reflect.Int, reflect.Int32, reflect.Int64:
-					var pad = "0"
+					var pad = defaultPadInt
 					if p, ok := tags[tagPad]; ok {
 						pad = p
 					}
@@ -79,7 +79,7 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 						v.Field(i).SetInt(tmpInt)
 					}
 				case reflect.String:
-					var pad = " "
+					var pad = defaultPadString
 					if p, ok := tags[tagPad]; ok {
 						pad = p
 					}
@@ -117,26 +117,4 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 		}
 	}
 	return
-}
-
-func initializeStruct(t reflect.Type, v reflect.Value) {
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		ft := t.Field(i)
-		switch ft.Type.Kind() {
-		case reflect.Map:
-			f.Set(reflect.MakeMap(ft.Type))
-		case reflect.Slice:
-			f.Set(reflect.MakeSlice(ft.Type, 0, 0))
-		case reflect.Chan:
-			f.Set(reflect.MakeChan(ft.Type, 0))
-		case reflect.Struct:
-			initializeStruct(ft.Type, f)
-		case reflect.Ptr:
-			fv := reflect.New(ft.Type.Elem())
-			initializeStruct(ft.Type.Elem(), fv.Elem())
-			f.Set(fv)
-		default:
-		}
-	}
 }
