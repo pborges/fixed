@@ -27,6 +27,7 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
+		val := v.Field(i)
 		tag := field.Tag.Get(tagName)
 		if tag == "" {
 			continue
@@ -54,7 +55,13 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 					return
 				}
 			} else {
-				switch v.Field(i).Kind() {
+				typ := t.Field(i).Type
+				isPtr := false
+				if typ.Kind() == reflect.Ptr {
+					typ = typ.Elem()
+					isPtr = true
+				}
+				switch typ.Kind() {
 				case reflect.Int, reflect.Int32, reflect.Int64:
 					var pad = defaultPadInt
 					if p, ok := tags[tagPad]; ok {
@@ -76,31 +83,50 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 							err = errors.New(fmt.Sprintf("parseInt error for field %s tag %s, %s", field.Name, tag, err.Error()))
 							return
 						}
-						v.Field(i).SetInt(tmpInt)
+						val.SetInt(tmpInt)
 					}
 				case reflect.String:
 					var pad = defaultPadString
 					if p, ok := tags[tagPad]; ok {
 						pad = p
 					}
-					if len(buff) > 0 && buff[0] != 0x00 {
-						v.Field(i).SetString(strings.Trim(string(buff), pad))
+					s := strings.Trim(string(buff), pad)
+					if len(s) > 0 && s[0] != 0x00 {
+						if isPtr {
+							e := reflect.New(v.Field(i).Type().Elem())
+							e.Elem().SetString(s)
+							v.Field(i).Set(e)
+						} else {
+							val.SetString(s)
+						}
 					}
 				case reflect.Slice:
 					if _, ok := v.Field(i).Interface().([]byte); ok {
-						v.Field(i).SetBytes(buff)
+						val.SetBytes(buff)
 					} else {
 						err = errors.New(fmt.Sprintf("Unknown slice type %s", v.Field(i).Kind()))
 						return
 					}
 				case reflect.Struct:
-					if t, ok := v.Field(i).Interface().(time.Time); ok {
-						if tag, ok := tags[tagFormat]; ok {
-							t, err = time.Parse(tag, string(buff))
-							if err != nil {
-								return
+					e := v.Field(i)
+					isPtr := reflect.TypeOf(e.Interface()).Kind() == reflect.Ptr
+					if isPtr {
+						e = reflect.New(v.Field(i).Type().Elem())
+						val = e.Elem()
+					}
+					if t, ok := val.Interface().(time.Time); ok {
+						if format, ok := tags[tagFormat]; ok {
+							s := strings.Trim(string(buff), " ")
+							if len(s) > 0 && s[0] != 0x00 {
+								t, err = time.Parse(format, s)
+								if err != nil {
+									return
+								}
+								val.Set(reflect.ValueOf(t))
+								if isPtr {
+									v.Field(i).Set(e)
+								}
 							}
-							v.Field(i).Set(reflect.ValueOf(t))
 						} else {
 							err = errors.New("no date format specified")
 							return

@@ -89,6 +89,24 @@ func TestUnmarshalTime(t *testing.T) {
 		t.Error("Date decoded incorrectly")
 	}
 }
+func TestUnmarshalTimePointer(t *testing.T) {
+	data := []byte("11161990        ")
+
+	dest := struct {
+		Date1 *time.Time `fixed:"len:8,format:01022006"`
+		Date2 *time.Time `fixed:"len:8,format:01022006"`
+	}{}
+	err := Unmarshal(data, &dest)
+	if err != nil {
+		t.Error(err)
+	}
+	if strings.Compare(dest.Date1.Format("01022006"), "11161990") != 0 {
+		t.Error("Date decoded incorrectly got", dest.Date1.Format("01022006"))
+	}
+	if dest.Date2 != nil {
+		t.Error("Date decoded incorrectly expected nil")
+	}
+}
 
 type FixedDate struct {
 	time.Time
@@ -126,5 +144,24 @@ func TestMultiUnmarshal(t *testing.T) {
 	err := Unmarshal(data, &dest)
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestUnmarshalStringPtr(t *testing.T) {
+	data := []byte("TEST            ")
+	dest := struct {
+		String1 *string `fixed:"len:8"`
+		String2 *string `fixed:"len:8"`
+	}{}
+	err := Unmarshal(data, &dest)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if *dest.String1 != "TEST" {
+		t.Error("String decoded incorrectly expected: TEST")
+	}
+	if dest.String2 != nil {
+		t.Error("String decoded incorrectly expected: nil")
 	}
 }
