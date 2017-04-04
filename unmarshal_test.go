@@ -58,7 +58,7 @@ func TestUnmarshalString(t *testing.T) {
 	}
 
 	if dest.String != "TEST" {
-		t.Error("String decoded incorrectly expected: TEST got:", dest.String)
+		t.Error("String decoded incorrectly expected: 'TEST' got:'" + dest.String + "'")
 	}
 }
 func TestUnmarshalBytes(t *testing.T) {
@@ -89,7 +89,7 @@ func TestUnmarshalTime(t *testing.T) {
 		t.Error("Date decoded incorrectly")
 	}
 }
-func TestUnmarshalTimePointer(t *testing.T) {
+func TestUnmarshalTimePtr(t *testing.T) {
 	data := []byte("11161990        ")
 
 	dest := struct {
@@ -127,8 +127,10 @@ func TestUnmarshalCustom(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if strings.Compare(dest.Date.Time.Format("01022006"), string(data)) != 0 {
-		t.Error("Date decoded incorrectly")
+	if dest.Date == nil {
+		t.Error("Date decoded incorrectly, got nil")
+	} else if strings.Compare(dest.Date.Format("01022006"), string(data)) != 0 {
+		t.Error("Date decoded incorrectly, expected: '" + string(data) + "' got: '" + dest.Date.Format("01022006") + "'")
 	}
 }
 
@@ -157,11 +159,14 @@ func TestUnmarshalStringPtr(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	if *dest.String1 != "TEST" {
-		t.Error("String decoded incorrectly expected: TEST")
+	if dest.String1 == nil {
+		t.Error("String1 decoded incorrectly expected: TEST, got nil")
+	} else {
+		if *dest.String1 != "TEST" {
+			t.Error("String1 decoded incorrectly expected: TEST")
+		}
 	}
 	if dest.String2 != nil {
-		t.Error("String decoded incorrectly expected: nil")
+		t.Error("String2 decoded incorrectly expected: nil")
 	}
 }
