@@ -22,16 +22,20 @@ func TestUnmarshalIntegerZeroPad(t *testing.T) {
 	}
 }
 func TestUnmarshalIntegerSpacePad(t *testing.T) {
-	data := []byte("   1")
+	data := []byte("   1    ")
 	dest := struct {
-		Number int `fixed:"len:4,pad: "`
+		Number1 int `fixed:"len:4,pad: "`
+		Number2 int `fixed:"len:4,pad: "`
 	}{}
 	err := Unmarshal(data, &dest)
 	if err != nil {
 		t.Error(err)
 	}
-	if dest.Number != 1 {
-		t.Error("Number decoded incorrectly expected: 1 got:", dest.Number)
+	if dest.Number1 != 1 {
+		t.Error("Number decoded incorrectly expected: 1 got:", dest.Number1)
+	}
+	if dest.Number2 != 0 {
+		t.Error("Number decoded incorrectly expected: 0 got:", dest.Number2)
 	}
 }
 func TestUnmarshalIntegerZeroPadPtr(t *testing.T) {
