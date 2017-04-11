@@ -20,6 +20,14 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 }
 
 func unmarshalRecursive(data []byte, field *reflect.StructField, val reflect.Value) (valid bool, err error) {
+	var tagz *fixedTags
+	if field != nil {
+		tagz, err = parseTags(*field, val.Kind())
+		if err != nil {
+			return
+		}
+	}
+
 	valid = true
 	//custom unmarshaler
 	if _, ok := val.Interface().(Unmarshaler); ok {
@@ -27,9 +35,6 @@ func unmarshalRecursive(data []byte, field *reflect.StructField, val reflect.Val
 			val.Set(reflect.New(val.Type().Elem()))
 		}
 		err = val.Interface().(Unmarshaler).UnmarshalFixed(data)
-		if err != nil {
-			return
-		}
 		return
 	}
 	switch val.Kind() {
@@ -57,15 +62,10 @@ func unmarshalRecursive(data []byte, field *reflect.StructField, val reflect.Val
 	case reflect.Struct:
 		// struct type exceptions
 		if t, ok := val.Interface().(time.Time); ok {
-			tags := splitTags(*field)
-			var pad = defaultPadString
-			if p, ok := tags[tagPad]; ok {
-				pad = p
-			}
-			if format, ok := tags[tagFormat]; ok {
-				s := strings.Trim(string(data), pad)
+			if tagz.Format != "" {
+				s := strings.Trim(string(data), tagz.Pad)
 				if len(s) > 0 && s[0] != 0x00 {
-					t, err = time.Parse(format, s)
+					t, err = time.Parse(tagz.Format, s)
 					if err != nil {
 						return
 					}
@@ -84,60 +84,37 @@ func unmarshalRecursive(data []byte, field *reflect.StructField, val reflect.Val
 		pos := 0
 		for i := 0; i < val.NumField(); i += 1 {
 			field := tipe.Field(i)
-			tag := field.Tag.Get(tagName)
-			if tag == "" {
+			tagz, err = parseTags(field, field.Type.Kind())
+			if err != nil {
+				return
+			}
+			if tagz == nil {
 				continue
 			}
-			var fieldLen int
-			tags := splitTags(field)
-			fieldLen, err = strconv.Atoi(tags[tagLen])
-			if err != nil {
-				err = errors.New(fmt.Sprintf("fieldLen %s, %s", field.Name, err.Error()))
+			if _, err = unmarshalRecursive(data[pos:pos+tagz.Len], &field, val.Field(i)); err != nil {
 				return
 			}
-			if _, err = unmarshalRecursive(data[pos:pos+fieldLen], &field, val.Field(i)); err != nil {
-				return
-			}
-			pos += fieldLen
+			pos += tagz.Len
 		}
 	case reflect.String:
-		var pad = defaultPadString
-		tags := splitTags(*field)
-		if p, ok := tags[tagPad]; ok {
-			pad = p
-		}
 		s := string(data)
-		s = strings.Trim(s, pad)
+		s = strings.Trim(s, tagz.Pad)
 		val.SetString(s)
 		if s == "" {
 			valid = false
 		}
 		return
-	case reflect.Int, reflect.Int32, reflect.Int64:
-		tags := splitTags(*field)
-		var pad = defaultPadInt
-		if p, ok := tags[tagPad]; ok {
-			pad = p
-		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if len(data) > 0 && data[0] != 0x00 {
-			var base = 10
-			if _, ok := tags[tagBase]; ok {
-				base, err = strconv.Atoi(tags[tagBase])
-				if err != nil {
-					err = errors.New("Invalid integer base " + tags[tagBase])
-					return
-				}
-			}
-
 			var tmpInt int64
-			if pad != defaultPadInt {
-				data = bytes.Trim(data, pad)
+			if tagz.Pad != defaultPadInt {
+				data = bytes.Trim(data, tagz.Pad)
 			}
 			if string(data) == "" {
 				valid = false
 				return
 			}
-			tmpInt, err = strconv.ParseInt(string(data), base, 64)
+			tmpInt, err = strconv.ParseInt(string(data), tagz.Base, 64)
 			if err != nil {
 				err = errors.New(fmt.Sprintf("parseInt error for field %s tag %s, %s", field.Name, field.Tag.Get(tagName), err.Error()))
 				return

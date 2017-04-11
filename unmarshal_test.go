@@ -99,6 +99,24 @@ func TestUnmarshalString(t *testing.T) {
 		t.Error("String decoded incorrectly expected: 'TEST' got:'" + dest.String + "'")
 	}
 }
+func TestUnmarshalSkipNonTagged(t *testing.T) {
+	data := []byte("TEST    ")
+	dest := struct {
+		String1 string `fixed:"len:8"`
+		String2 string
+	}{}
+	err := Unmarshal(data, &dest)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if dest.String1 != "TEST" {
+		t.Error("String decoded incorrectly expected: 'TEST' got:'" + dest.String1 + "'")
+	}
+	if dest.String2 != "" {
+		t.Error("String decoded incorrectly expected: '' got:'" + dest.String2 + "'")
+	}
+}
 func TestUnmarshalBytes(t *testing.T) {
 	data := []byte{0xDE, 0xAD, 0xBE, 0xEF}
 	dest := struct {
@@ -152,6 +170,11 @@ type FixedDate struct {
 
 func (f *FixedDate) UnmarshalFixed(data []byte) (err error) {
 	f.Time, err = time.Parse("01022006", string(data))
+	return
+}
+
+func (f FixedDate) MarshalFixed() (data []byte, err error) {
+	data = []byte(f.Time.Format("01022006"))
 	return
 }
 
