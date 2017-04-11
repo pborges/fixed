@@ -34,6 +34,40 @@ func TestUnmarshalIntegerSpacePad(t *testing.T) {
 		t.Error("Number decoded incorrectly expected: 1 got:", dest.Number)
 	}
 }
+func TestUnmarshalIntegerZeroPadPtr(t *testing.T) {
+	data := []byte("00010000")
+	dest := struct {
+		Number1 *int `fixed:"len:4"`
+		Number2 *int `fixed:"len:4"`
+	}{}
+	err := Unmarshal(data, &dest)
+	if err != nil {
+		t.Error(err)
+	}
+	if dest.Number1 == nil || *dest.Number1 != 1 {
+		t.Error("Number decoded incorrectly expected: 1 got:", dest.Number1)
+	}
+	if dest.Number1 == nil || *dest.Number2 != 0 {
+		t.Error("Number decoded incorrectly expected: 0 got:", dest.Number1)
+	}
+}
+func TestUnmarshalIntegerSpacePadPtr(t *testing.T) {
+	data := []byte("   1    ")
+	dest := struct {
+		Number1 *int `fixed:"len:4,pad: "`
+		Number2 *int `fixed:"len:4,pad: "`
+	}{}
+	err := Unmarshal(data, &dest)
+	if err != nil {
+		t.Error(err)
+	}
+	if dest.Number1 == nil || *dest.Number1 != 1 {
+		t.Error("Number decoded incorrectly expected: 1 got:", dest.Number1)
+	}
+	if dest.Number2 != nil {
+		t.Error("Number decoded incorrectly expected: nil")
+	}
+}
 func TestUnmarshalIntegerHEX(t *testing.T) {
 	data := []byte("00FF")
 	dest := struct {

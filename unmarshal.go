@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"bytes"
 )
 
 type Unmarshaler interface {
@@ -129,7 +130,14 @@ func unmarshalRecursive(data []byte, field *reflect.StructField, val reflect.Val
 			}
 
 			var tmpInt int64
-			tmpInt, err = strconv.ParseInt(strings.Trim(string(data), pad), base, 64)
+			if pad != defaultPadInt {
+				data = bytes.Trim(data, pad)
+			}
+			if string(data) == "" {
+				valid = false
+				return
+			}
+			tmpInt, err = strconv.ParseInt(string(data), base, 64)
 			if err != nil {
 				err = errors.New(fmt.Sprintf("parseInt error for field %s tag %s, %s", field.Name, field.Tag.Get(tagName), err.Error()))
 				return
